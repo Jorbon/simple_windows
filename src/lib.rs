@@ -1,5 +1,5 @@
 use std::{os::{raw::c_void, windows::ffi::OsStrExt}, ffi::OsStr};
-use windows::{core::{Result, PCWSTR, Error, HSTRING}, Win32::{Foundation::{HWND, RECT, LPARAM, LRESULT, WPARAM}, UI::WindowsAndMessaging::{self, CS_HREDRAW, CS_VREDRAW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW, HICON, RegisterClassW, LoadCursorW, WNDCLASSW, IDC_ARROW, DefWindowProcW, GetWindowLongPtrW, SetWindowLongPtrW, WM_NCCREATE, CREATESTRUCTW, GWLP_USERDATA, TranslateMessage, DispatchMessageW, GetMessageW, PostQuitMessage, MSG, CreateWindowExW, CW_USEDEFAULT, SW_SHOW, ShowWindow, GetClientRect, WINDOW_EX_STYLE, /*CreateMenu, MF_STRING, AppendMenuW, SetMenu, MF_POPUP,*/ AdjustWindowRectEx, SetTimer, KillTimer}, System::{WinRT::{DispatcherQueueOptions, RoInitialize, DQTYPE_THREAD_CURRENT, DQTAT_COM_NONE, RO_INIT_SINGLETHREADED, CreateDispatcherQueueController}, LibraryLoader::GetModuleHandleW}, Graphics::Gdi::{PAINTSTRUCT, BeginPaint, EndPaint, SelectObject, DeleteObject, CreateCompatibleDC, BITMAPINFO, BITMAPINFOHEADER, RGBQUAD, BI_RGB, CreateDIBSection, DIB_RGB_COLORS, BitBlt, SRCCOPY, DeleteDC, HBRUSH, HBITMAP, GetDC, ReleaseDC, InvalidateRect}}, Foundation::AsyncActionCompletedHandler};
+use windows::{core::{Result, PCWSTR, Error, HSTRING}, Win32::{Foundation::{HWND, RECT, LPARAM, LRESULT, WPARAM}, UI::{WindowsAndMessaging::{self, CS_HREDRAW, CS_VREDRAW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW, HICON, RegisterClassW, LoadCursorW, WNDCLASSW, IDC_ARROW, DefWindowProcW, GetWindowLongPtrW, SetWindowLongPtrW, WM_NCCREATE, CREATESTRUCTW, GWLP_USERDATA, TranslateMessage, DispatchMessageW, GetMessageW, PostQuitMessage, MSG, CreateWindowExW, CW_USEDEFAULT, SW_SHOW, ShowWindow, GetClientRect, WINDOW_EX_STYLE, /*CreateMenu, MF_STRING, AppendMenuW, SetMenu, MF_POPUP,*/ AdjustWindowRectEx, SetTimer, KillTimer}, Input::KeyboardAndMouse::{SetCapture, ReleaseCapture}}, System::{WinRT::{DispatcherQueueOptions, RoInitialize, DQTYPE_THREAD_CURRENT, DQTAT_COM_NONE, RO_INIT_SINGLETHREADED, CreateDispatcherQueueController}, LibraryLoader::GetModuleHandleW}, Graphics::Gdi::{PAINTSTRUCT, BeginPaint, EndPaint, SelectObject, DeleteObject, CreateCompatibleDC, BITMAPINFO, BITMAPINFOHEADER, RGBQUAD, BI_RGB, CreateDIBSection, DIB_RGB_COLORS, BitBlt, SRCCOPY, DeleteDC, HBRUSH, HBITMAP, GetDC, ReleaseDC, InvalidateRect}}, Foundation::AsyncActionCompletedHandler};
 
 mod tests;
 
@@ -18,10 +18,10 @@ pub struct Rect {
     pub bottom: i32
 }
 impl Rect {
-	fn width(&self) -> i32 {
+	pub fn width(&self) -> i32 {
 		self.right - self.left
 	}
-	fn height(&self) -> i32 {
+	pub fn height(&self) -> i32 {
 		self.bottom - self.top
 	}
 }
@@ -43,7 +43,21 @@ pub trait SimpleWindowApp {
 	#[allow(unused_variables)]
 	fn on_mouse_left_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
 	#[allow(unused_variables)]
+	fn on_mouse_middle_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
+	#[allow(unused_variables)]
 	fn on_mouse_right_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
+	#[allow(unused_variables)]
+	fn on_mouse_left_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
+	#[allow(unused_variables)]
+	fn on_mouse_middle_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
+	#[allow(unused_variables)]
+	fn on_mouse_right_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
+	#[allow(unused_variables)]
+	fn on_key_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, key_code: u32) {}
+	#[allow(unused_variables)]
+	fn on_key_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, key_code: u32) {}
+	#[allow(unused_variables)]
+	fn on_scroll(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, scroll_distance: i16) {}
 	#[allow(unused_variables)]
 	fn on_exit(&mut self, handle: &WindowHandle) {}
 	#[allow(unused_variables)]
@@ -92,6 +106,23 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 	let app = unsafe { &mut *(app_ptr as *mut App) };
 	
 	match message {
+		WindowsAndMessaging::WM_ACTIVATE => {
+			if wparam.0 as u32 & 0xFFFF == WindowsAndMessaging::WA_INACTIVE {
+				unsafe { ReleaseCapture() }.unwrap();
+			} else {
+				unsafe { SetCapture(app.window_handle.0) };
+			}
+		}
+		WindowsAndMessaging::WM_CAPTURECHANGED => {
+			unsafe { ReleaseCapture() }.unwrap();
+		}
+		WindowsAndMessaging::WM_NCACTIVATE => {
+			if wparam.0 as u32 == WindowsAndMessaging::WA_INACTIVE {
+				unsafe { ReleaseCapture() }.unwrap();
+			} else {
+				unsafe { SetCapture(app.window_handle.0) };
+			}
+		}
 		WindowsAndMessaging::WM_TIMER => {
 			unsafe { KillTimer(app.window_handle.0, wparam.0) }.unwrap_or_else(|e| app.user_state.on_error(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, &format!("Error stopping timer {}: {}", wparam.0, e)));
 			app.user_state.on_timer(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, wparam.0);
@@ -151,10 +182,37 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 			app.user_state.on_mouse_move(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_LBUTTONDOWN => {
+			unsafe { SetCapture(app.window_handle.0) };
 			app.user_state.on_mouse_left_down(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
+		WindowsAndMessaging::WM_MBUTTONDOWN => {
+			unsafe { SetCapture(app.window_handle.0) };
+			app.user_state.on_mouse_middle_down(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
+		}
 		WindowsAndMessaging::WM_RBUTTONDOWN => {
+			unsafe { SetCapture(app.window_handle.0) };
 			app.user_state.on_mouse_right_down(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
+		}
+		WindowsAndMessaging::WM_LBUTTONUP => {
+			unsafe { SetCapture(app.window_handle.0) };
+			app.user_state.on_mouse_left_up(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
+		}
+		WindowsAndMessaging::WM_MBUTTONUP => {
+			unsafe { SetCapture(app.window_handle.0) };
+			app.user_state.on_mouse_middle_up(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
+		}
+		WindowsAndMessaging::WM_RBUTTONUP => {
+			unsafe { SetCapture(app.window_handle.0) };
+			app.user_state.on_mouse_right_up(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
+		}
+		WindowsAndMessaging::WM_KEYDOWN => {
+			app.user_state.on_key_down(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, wparam.0 as u32);
+		}
+		WindowsAndMessaging::WM_KEYUP => {
+			app.user_state.on_key_up(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, wparam.0 as u32);
+		}
+		WindowsAndMessaging::WM_MOUSEWHEEL => {
+			app.user_state.on_scroll(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, (wparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_COMMAND => {
 			app.user_state.on_command(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, wparam.0 as u16);
@@ -273,7 +331,6 @@ pub fn run_window_process(window_id: &str, window_width: u32, window_height: u32
 	}*/
 	
 	unsafe { ShowWindow(window, SW_SHOW) };
-	
 	
 	
 	let mut message = MSG::default();

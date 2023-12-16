@@ -11,7 +11,7 @@ struct MyAppState {
 
 impl SimpleWindowApp for MyAppState {
 	fn on_paint(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect) {
-		handle.set_timer(0, 100);
+		handle.set_timer(0, 1);
 		
 		let now = std::time::Instant::now();
 		let dt = now.duration_since(self.previous_frame_time).as_secs_f64();
