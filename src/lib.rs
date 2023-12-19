@@ -1,12 +1,7 @@
 use std::{os::{raw::c_void, windows::ffi::OsStrExt}, ffi::OsStr};
-use windows::{core::{Result, PCWSTR, Error, HSTRING}, Win32::{Foundation::{HWND, RECT, LPARAM, LRESULT, WPARAM}, UI::{WindowsAndMessaging::{self, CS_HREDRAW, CS_VREDRAW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW, HICON, RegisterClassW, LoadCursorW, WNDCLASSW, IDC_ARROW, DefWindowProcW, GetWindowLongPtrW, SetWindowLongPtrW, WM_NCCREATE, CREATESTRUCTW, GWLP_USERDATA, TranslateMessage, DispatchMessageW, GetMessageW, PostQuitMessage, MSG, CreateWindowExW, CW_USEDEFAULT, SW_SHOW, ShowWindow, GetClientRect, WINDOW_EX_STYLE, /*CreateMenu, MF_STRING, AppendMenuW, SetMenu, MF_POPUP,*/ AdjustWindowRectEx, SetTimer, KillTimer}, Input::KeyboardAndMouse::{SetCapture, ReleaseCapture}}, System::{WinRT::{DispatcherQueueOptions, RoInitialize, DQTYPE_THREAD_CURRENT, DQTAT_COM_NONE, RO_INIT_SINGLETHREADED, CreateDispatcherQueueController}, LibraryLoader::GetModuleHandleW}, Graphics::Gdi::{PAINTSTRUCT, BeginPaint, EndPaint, SelectObject, DeleteObject, CreateCompatibleDC, BITMAPINFO, BITMAPINFOHEADER, RGBQUAD, BI_RGB, CreateDIBSection, DIB_RGB_COLORS, BitBlt, SRCCOPY, DeleteDC, HBRUSH, HBITMAP, GetDC, ReleaseDC, InvalidateRect}}, Foundation::AsyncActionCompletedHandler};
+use windows::{core::{Result, PCWSTR, Error, HSTRING}, Win32::{Foundation::{HWND, RECT, LPARAM, LRESULT, WPARAM}, UI::{WindowsAndMessaging::{self, CS_HREDRAW, CS_VREDRAW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW, HICON, RegisterClassW, LoadCursorW, WNDCLASSW, IDC_ARROW, DefWindowProcW, GetWindowLongPtrW, SetWindowLongPtrW, WM_NCCREATE, CREATESTRUCTW, GWLP_USERDATA, TranslateMessage, DispatchMessageW, GetMessageW, PostQuitMessage, MSG, CreateWindowExW, CW_USEDEFAULT, SW_SHOW, ShowWindow, GetClientRect, WINDOW_EX_STYLE, CreateMenu, MF_STRING, AppendMenuW, SetMenu, MF_POPUP, AdjustWindowRectEx, SetTimer, KillTimer, GetMenu, HMENU, GetSubMenu, ModifyMenuW, GetMenuItemCount, DestroyMenu, DrawMenuBar}, Input::KeyboardAndMouse::{SetCapture, ReleaseCapture}}, System::{WinRT::{DispatcherQueueOptions, RoInitialize, DQTYPE_THREAD_CURRENT, DQTAT_COM_NONE, RO_INIT_SINGLETHREADED, CreateDispatcherQueueController}, LibraryLoader::GetModuleHandleW}, Graphics::Gdi::{PAINTSTRUCT, BeginPaint, EndPaint, SelectObject, DeleteObject, CreateCompatibleDC, BITMAPINFO, BITMAPINFOHEADER, RGBQUAD, BI_RGB, CreateDIBSection, DIB_RGB_COLORS, BitBlt, SRCCOPY, DeleteDC, HBRUSH, HBITMAP, GetDC, ReleaseDC, InvalidateRect}}, Foundation::AsyncActionCompletedHandler};
 
 mod tests;
-
-
-// Todo:
-// menu builder
-// more handles
 
 
 #[repr(C)]
@@ -27,52 +22,91 @@ impl Rect {
 }
 
 
+#[allow(unused_variables)]
 pub trait SimpleWindowApp {
-	#[allow(unused_variables)]
+	fn on_init(&mut self, handle: &WindowHandle) {}
 	fn on_paint(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect) {}
-	#[allow(unused_variables)]
 	fn on_command(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, command_id: u16) {}
-	#[allow(unused_variables)]
 	fn on_timer(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, timer_id: usize) {}
-	#[allow(unused_variables)]
 	fn on_resize(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect) {}
-	#[allow(unused_variables)]
 	fn on_resizing(&mut self, handle: &WindowHandle, client_rect: &mut Rect) {}
-	#[allow(unused_variables)]
 	fn on_mouse_move(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
-	#[allow(unused_variables)]
 	fn on_mouse_left_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
-	#[allow(unused_variables)]
 	fn on_mouse_middle_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
-	#[allow(unused_variables)]
 	fn on_mouse_right_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
-	#[allow(unused_variables)]
 	fn on_mouse_left_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
-	#[allow(unused_variables)]
 	fn on_mouse_middle_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
-	#[allow(unused_variables)]
 	fn on_mouse_right_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, mouse_x: i16, mouse_y: i16) {}
-	#[allow(unused_variables)]
 	fn on_key_down(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, key_code: u32) {}
-	#[allow(unused_variables)]
 	fn on_key_up(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, key_code: u32) {}
-	#[allow(unused_variables)]
 	fn on_scroll(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, scroll_distance: i16) {}
-	#[allow(unused_variables)]
 	fn on_exit(&mut self, handle: &WindowHandle) {}
-	#[allow(unused_variables)]
 	fn on_error(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect, error_message: &str) {}
 }
 
 
+#[derive(Debug)]
+pub struct Menu {
+	hmenu: HMENU
+}
+impl Menu {
+	pub fn new() -> core::result::Result<Self, String> {
+		Ok(Self {
+			hmenu: unsafe { CreateMenu() }.map_err(|err| format!("Error creating menu: {err}"))?
+		})
+	}
+	pub fn get_submenu(&self, index: u32) -> Option<Menu> {
+		let hmenu = unsafe { GetSubMenu(self.hmenu, index as i32) };
+		if hmenu.is_invalid() {
+			None
+		} else {
+			Some(Menu { hmenu })
+		}
+	}
+	pub fn item_count(&self) -> u32 {
+		unsafe { GetMenuItemCount(self.hmenu) as u32 }
+	}
+	pub fn add_item(&self, command_id: u16, text: &str) -> core::result::Result<(), String> {
+		match command_id.checked_add(0xF001) {
+			Some(id) => unsafe { AppendMenuW(self.hmenu, MF_STRING, id as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding menu item: {err}")),
+			None => Err(format!("Command ID {command_id} is not allowed, 4094 is the maximum value."))
+		}
+	}
+	pub fn add_submenu(&self, submenu: Menu, text: &str) -> core::result::Result<(), String> {
+		unsafe { AppendMenuW(self.hmenu, MF_POPUP, submenu.hmenu.0 as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding submenu: {err}"))
+	}
+	pub fn replace_item(&self, index: u32, id: usize, text: &str) -> core::result::Result<(), String> {
+		unsafe { ModifyMenuW(self.hmenu, index, MF_STRING, id, &HSTRING::from(text)) }.map_err(|err| format!("Error editing menu item: {err}"))
+	}
+}
 
-pub struct WindowHandle(HWND);
+#[derive(Debug)]
+pub struct WindowHandle {
+	hwnd: HWND
+}
 impl WindowHandle {
 	pub fn set_timer(&self, timer_id: usize, milliseconds: u32) {
-		unsafe { SetTimer(self.0, timer_id, milliseconds, None) };
+		unsafe { SetTimer(self.hwnd, timer_id, milliseconds, None) };
 	}
 	pub fn request_redraw(&self) {
-		unsafe { InvalidateRect(self.0, None, false) };
+		unsafe { InvalidateRect(self.hwnd, None, false) };
+	}
+	pub fn get_menu(&self) -> Option<Menu> {
+		let hmenu = unsafe { GetMenu(self.hwnd) };
+		if hmenu.is_invalid() {
+			None
+		} else {
+			Some(Menu { hmenu })
+		}
+	}
+	pub fn replace_menu(&self, menu: Menu) -> core::result::Result<(), String> {
+		if let Some(menu) = self.get_menu() {
+			unsafe { DestroyMenu(menu.hmenu) }.unwrap_or(());
+		}
+		unsafe { SetMenu(self.hwnd, menu.hmenu) }.map_err(|err| format!("Error setting new menu: {err}"))
+	}
+	pub fn redraw_menu(&self) -> core::result::Result<(), String> {
+		unsafe { DrawMenuBar(self.hwnd) }.map_err(|err| format!("Error drawing menu bar: {err}"))
 	}
 }
 
@@ -89,7 +123,7 @@ unsafe extern "system" fn wnd_proc(window: HWND, message: u32, wparam: WPARAM, l
 	if message == WM_NCCREATE {
 		let cs = lparam.0 as *const CREATESTRUCTW;
 		let app_ptr = (*cs).lpCreateParams as *mut App;
-		(*app_ptr).window_handle.0 = window;
+		(*app_ptr).window_handle.hwnd = window;
 
 		SetWindowLongPtrW(window, GWLP_USERDATA, app_ptr as isize);
 	} else {
@@ -110,7 +144,7 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 			if wparam.0 as u32 & 0xFFFF == WindowsAndMessaging::WA_INACTIVE {
 				unsafe { ReleaseCapture() }.unwrap();
 			} else {
-				unsafe { SetCapture(app.window_handle.0) };
+				unsafe { SetCapture(app.window_handle.hwnd) };
 			}
 		}
 		WindowsAndMessaging::WM_CAPTURECHANGED => {
@@ -120,16 +154,22 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 			if wparam.0 as u32 == WindowsAndMessaging::WA_INACTIVE {
 				unsafe { ReleaseCapture() }.unwrap();
 			} else {
-				unsafe { SetCapture(app.window_handle.0) };
+				unsafe { SetCapture(app.window_handle.hwnd) };
+			}
+		}
+		WindowsAndMessaging::WM_COMMAND => {
+			match (wparam.0 as u16).checked_sub(0xF001) {
+				Some(id) => app.user_state.on_command(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, id),
+				None => ()
 			}
 		}
 		WindowsAndMessaging::WM_TIMER => {
-			unsafe { KillTimer(app.window_handle.0, wparam.0) }.unwrap_or_else(|e| app.user_state.on_error(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, &format!("Error stopping timer {}: {}", wparam.0, e)));
+			unsafe { KillTimer(app.window_handle.hwnd, wparam.0) }.unwrap_or_else(|e| app.user_state.on_error(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, &format!("Error stopping timer {}: {}", wparam.0, e)));
 			app.user_state.on_timer(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, wparam.0);
 		}
 		WindowsAndMessaging::WM_SIZE => {
 			let mut rect = Rect::default();
-			if let Err(e) = unsafe { GetClientRect(app.window_handle.0, &mut rect as *mut Rect as *mut RECT) } {
+			if let Err(e) = unsafe { GetClientRect(app.window_handle.hwnd, &mut rect as *mut Rect as *mut RECT) } {
 				app.user_state.on_error(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, &format!("Error getting window size: {e}"));
 				
 			} else if rect.width() > 0 && rect.height() > 0 {
@@ -160,7 +200,7 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 				
 				let mut pixel_data_pointer: *mut c_void = std::ptr::null_mut();
 				unsafe {
-					let dc = GetDC(app.window_handle.0);
+					let dc = GetDC(app.window_handle.hwnd);
 					app.bitmap = match CreateDIBSection(dc, &bmi, DIB_RGB_COLORS, &mut pixel_data_pointer, None, 0) {
 						Ok(bitmap) => Some(bitmap),
 						Err(e) => {
@@ -168,7 +208,7 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 							None
 						}
 					};
-					ReleaseDC(app.window_handle.0, dc);
+					ReleaseDC(app.window_handle.hwnd, dc);
 					app.pixel_buffer = std::mem::ManuallyDrop::new(Vec::from_raw_parts(pixel_data_pointer as *mut u8, buffer_size, buffer_size).into_boxed_slice());
 				}
 				
@@ -182,27 +222,27 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 			app.user_state.on_mouse_move(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_LBUTTONDOWN => {
-			unsafe { SetCapture(app.window_handle.0) };
+			unsafe { SetCapture(app.window_handle.hwnd) };
 			app.user_state.on_mouse_left_down(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_MBUTTONDOWN => {
-			unsafe { SetCapture(app.window_handle.0) };
+			unsafe { SetCapture(app.window_handle.hwnd) };
 			app.user_state.on_mouse_middle_down(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_RBUTTONDOWN => {
-			unsafe { SetCapture(app.window_handle.0) };
+			unsafe { SetCapture(app.window_handle.hwnd) };
 			app.user_state.on_mouse_right_down(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_LBUTTONUP => {
-			unsafe { SetCapture(app.window_handle.0) };
+			unsafe { SetCapture(app.window_handle.hwnd) };
 			app.user_state.on_mouse_left_up(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_MBUTTONUP => {
-			unsafe { SetCapture(app.window_handle.0) };
+			unsafe { SetCapture(app.window_handle.hwnd) };
 			app.user_state.on_mouse_middle_up(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_RBUTTONUP => {
-			unsafe { SetCapture(app.window_handle.0) };
+			unsafe { SetCapture(app.window_handle.hwnd) };
 			app.user_state.on_mouse_right_up(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, lparam.0 as i16, (lparam.0 >> 16) as i16);
 		}
 		WindowsAndMessaging::WM_KEYDOWN => {
@@ -214,15 +254,12 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 		WindowsAndMessaging::WM_MOUSEWHEEL => {
 			app.user_state.on_scroll(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, (wparam.0 >> 16) as i16);
 		}
-		WindowsAndMessaging::WM_COMMAND => {
-			app.user_state.on_command(&app.window_handle, &mut app.pixel_buffer, &app.client_rect, wparam.0 as u16);
-		}
 		WindowsAndMessaging::WM_PAINT => {
 			app.user_state.on_paint(&app.window_handle, &mut app.pixel_buffer, &app.client_rect);
 			
 			unsafe {
 				let mut ps = PAINTSTRUCT::default();
-				let hdc = BeginPaint(app.window_handle.0, &mut ps);
+				let hdc = BeginPaint(app.window_handle.hwnd, &mut ps);
 				
 				if let Some(bitmap) = app.bitmap {
 					let memory_dc = CreateCompatibleDC(hdc);
@@ -231,7 +268,7 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 					DeleteDC(memory_dc);
 				}
 				
-				EndPaint(app.window_handle.0, &mut ps);
+				EndPaint(app.window_handle.hwnd, &mut ps);
 			}
 		}
 		WindowsAndMessaging::WM_DESTROY => {
@@ -242,7 +279,7 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 		}
 		_ => {}
 	}
-	unsafe { DefWindowProcW(app.window_handle.0, message, wparam, lparam) }
+	unsafe { DefWindowProcW(app.window_handle.hwnd, message, wparam, lparam) }
 }
 
 
@@ -285,10 +322,10 @@ pub fn run_window_process(window_id: &str, window_width: u32, window_height: u32
 		right: window_width as i32,
 		bottom: window_height as i32,
 	};
-	unsafe { AdjustWindowRectEx(&mut adjust_rect, window_style, false, window_ex_style) }.map_err(|e| format!("Error adjusting window area: {e}"))?;
+	unsafe { AdjustWindowRectEx(&mut adjust_rect, window_style, false, window_ex_style) }.map_err(|e| format!("Error setting up window area: {e}"))?;
 	
 	let mut app = App {
-		window_handle: WindowHandle(HWND(0)),
+		window_handle: WindowHandle{ hwnd: HWND(0) },
 		client_rect: Rect::default(),
 		bitmap: None,
 		pixel_buffer: core::mem::ManuallyDrop::default(),
@@ -314,21 +351,10 @@ pub fn run_window_process(window_id: &str, window_width: u32, window_height: u32
 		return Err(format!("Error creating window: {}", Error::from_win32()));
 	}
 	
-	/*unsafe {
-		let menu = CreateMenu().unwrap();
-		let submenu = WindowsAndMessaging::CreatePopupMenu().unwrap();
-		AppendMenuW(submenu, MF_STRING, 1, w!("yes")).unwrap();
-		AppendMenuW(submenu, MF_STRING, 2, w!("no")).unwrap();
-		AppendMenuW(menu, MF_STRING | MF_POPUP, submenu.0 as usize, w!("Gaming")).unwrap();
-		
-		
-		let submenu2 = WindowsAndMessaging::CreatePopupMenu().unwrap();
-		AppendMenuW(submenu2, MF_STRING, 3, w!("maybe")).unwrap();
-		AppendMenuW(submenu2, MF_STRING, 4, w!("ok")).unwrap();
-		AppendMenuW(menu, MF_STRING | MF_POPUP, submenu2.0 as usize, w!("Not gaming")).unwrap();
-		
-		SetMenu(app.window_handle, menu).unwrap();
-	}*/
+	let menu = unsafe { CreateMenu() }.map_err(|err| format!("Error initializing menu: {err}"))?;
+	unsafe { SetMenu(window, menu) }.map_err(|err| format!("Error initializing menu: {err}"))?;
+	
+	app.user_state.on_init(&WindowHandle { hwnd: window });
 	
 	unsafe { ShowWindow(window, SW_SHOW) };
 	
@@ -357,6 +383,10 @@ pub fn run_window_process(window_id: &str, window_width: u32, window_height: u32
 			TranslateMessage(&message);
 			DispatchMessageW(&message);
 		}
+	}
+	
+	if let Some(menu) = app.window_handle.get_menu() {
+		unsafe{ DestroyMenu(menu.hmenu) }.unwrap_or(());
 	}
 	
 	Ok(message.wParam.0 as i32)

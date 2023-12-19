@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 use super::*;
-use crate::{SimpleWindowApp, WindowHandle, Rect};
+use crate::{SimpleWindowApp, WindowHandle, Rect, Menu};
 
 
 struct MyAppState {
@@ -11,7 +11,7 @@ struct MyAppState {
 
 impl SimpleWindowApp for MyAppState {
 	fn on_paint(&mut self, handle: &WindowHandle, pixel_buffer: &mut [u8], client_rect: &Rect) {
-		handle.set_timer(0, 1);
+		handle.set_timer(0, 1000);
 		
 		let now = std::time::Instant::now();
 		let dt = now.duration_since(self.previous_frame_time).as_secs_f64();
@@ -45,6 +45,14 @@ impl SimpleWindowApp for MyAppState {
 	//fn on_resizing(&mut self, _handle: &WindowHandle, client_rect: &mut Rect) {}
 	fn on_error(&mut self, _handle: &WindowHandle, _pixel_buffer: &mut [u8], _client_rect: &Rect, error_message: &str) {
 		println!("{error_message}");
+	}
+	fn on_key_down(&mut self, handle: &WindowHandle, _pixel_buffer: &mut [u8], _client_rect: &Rect, key_code: u32) {
+		handle.get_menu().unwrap().add_item(7, &key_code.to_string()).unwrap();
+		let menu = Menu::new().unwrap();
+		menu.add_item(key_code as u16, &format!("hello {key_code}")).unwrap();
+		handle.replace_menu(menu).unwrap();
+		handle.redraw_menu().unwrap();
+		
 	}
 }
 
