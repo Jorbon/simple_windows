@@ -75,10 +75,7 @@ impl Menu {
 		unsafe { GetMenuItemCount(self.hmenu) as u32 }
 	}
 	pub fn add_item(&self, id: u16, text: &str) -> Result<(), String> {
-		match id.checked_add(0xF001) {
-			Some(id) => unsafe { AppendMenuW(self.hmenu, MF_STRING, internalize_id(id)? as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding menu item: {err}")),
-			None => Err(format!("ID {id} is not allowed, 4094 is the maximum value."))
-		}
+		unsafe { AppendMenuW(self.hmenu, MF_STRING, internalize_id(id)? as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding menu item: {err}"))
 	}
 	pub fn add_submenu(&self, submenu: Menu, text: &str) -> Result<(), String> {
 		unsafe { AppendMenuW(self.hmenu, MF_POPUP, submenu.hmenu.0 as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding submenu: {err}"))
