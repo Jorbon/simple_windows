@@ -1,5 +1,6 @@
+use core::result::Result;
 use std::{os::{raw::c_void, windows::ffi::OsStrExt}, ffi::OsStr};
-use windows::{core::{Result, PCWSTR, Error, HSTRING}, Win32::{Foundation::{HWND, RECT, LPARAM, LRESULT, WPARAM}, UI::{WindowsAndMessaging::{self, CS_HREDRAW, CS_VREDRAW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW, HICON, RegisterClassW, LoadCursorW, WNDCLASSW, IDC_ARROW, DefWindowProcW, GetWindowLongPtrW, SetWindowLongPtrW, WM_NCCREATE, CREATESTRUCTW, GWLP_USERDATA, TranslateMessage, DispatchMessageW, GetMessageW, PostQuitMessage, MSG, CreateWindowExW, CW_USEDEFAULT, SW_SHOW, ShowWindow, GetClientRect, WINDOW_EX_STYLE, CreateMenu, MF_STRING, AppendMenuW, SetMenu, MF_POPUP, AdjustWindowRectEx, SetTimer, KillTimer, GetMenu, HMENU, GetSubMenu, ModifyMenuW, GetMenuItemCount, DestroyMenu, DrawMenuBar}, Input::KeyboardAndMouse::{SetCapture, ReleaseCapture}}, System::{WinRT::{DispatcherQueueOptions, RoInitialize, DQTYPE_THREAD_CURRENT, DQTAT_COM_NONE, RO_INIT_SINGLETHREADED, CreateDispatcherQueueController}, LibraryLoader::GetModuleHandleW}, Graphics::Gdi::{PAINTSTRUCT, BeginPaint, EndPaint, SelectObject, DeleteObject, CreateCompatibleDC, BITMAPINFO, BITMAPINFOHEADER, RGBQUAD, BI_RGB, CreateDIBSection, DIB_RGB_COLORS, BitBlt, SRCCOPY, DeleteDC, HBRUSH, HBITMAP, GetDC, ReleaseDC, InvalidateRect}}, Foundation::AsyncActionCompletedHandler};
+use windows::{core::{PCWSTR, Error, HSTRING}, Win32::{Foundation::{HWND, RECT, LPARAM, LRESULT, WPARAM, BOOL, FALSE}, UI::{WindowsAndMessaging::{self, CS_HREDRAW, CS_VREDRAW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW, HICON, RegisterClassW, LoadCursorW, WNDCLASSW, IDC_ARROW, DefWindowProcW, GetWindowLongPtrW, SetWindowLongPtrW, WM_NCCREATE, CREATESTRUCTW, GWLP_USERDATA, TranslateMessage, DispatchMessageW, GetMessageW, PostQuitMessage, MSG, CreateWindowExW, CW_USEDEFAULT, SW_SHOW, ShowWindow, GetClientRect, WINDOW_EX_STYLE, CreateMenu, MF_STRING, AppendMenuW, SetMenu, MF_POPUP, AdjustWindowRectEx, SetTimer, KillTimer, GetMenu, HMENU, MF_SEPARATOR, CheckMenuItem, HiliteMenuItem, EnableMenuItem, MF_REMOVE, MF_ENABLED, MF_DISABLED, MF_HILITE, MF_UNHILITE, GetMenuItemInfoW, MENUITEMINFOW, SetMenuItemInfoW, MF_UNCHECKED, ModifyMenuW, MF_CHECKED, GetMenuItemCount, GetSubMenu, MENU_ITEM_TYPE, MIIM_TYPE, MFT_MENUBREAK, MFT_MENUBARBREAK, MFT_RIGHTJUSTIFY, DestroyMenu, DrawMenuBar}, Input::KeyboardAndMouse::{SetCapture, ReleaseCapture}}, System::{WinRT::{DispatcherQueueOptions, RoInitialize, DQTYPE_THREAD_CURRENT, DQTAT_COM_NONE, RO_INIT_SINGLETHREADED, CreateDispatcherQueueController}, LibraryLoader::GetModuleHandleW}, Graphics::Gdi::{PAINTSTRUCT, BeginPaint, EndPaint, SelectObject, DeleteObject, CreateCompatibleDC, BITMAPINFO, BITMAPINFOHEADER, RGBQUAD, BI_RGB, CreateDIBSection, DIB_RGB_COLORS, BitBlt, SRCCOPY, DeleteDC, HBRUSH, HBITMAP, GetDC, ReleaseDC, InvalidateRect}}, Foundation::AsyncActionCompletedHandler};
 
 mod tests;
 
@@ -45,12 +46,19 @@ pub trait SimpleWindowApp {
 }
 
 
+fn internalize_id(id: u16) -> Result<u32, String> {
+	match id.checked_add(0xF001) {
+		Some(wid) => Ok(wid as u32),
+		None => Err(format!("ID {id} is not allowed, 4094 is the maximum value."))
+	}
+}
+
 #[derive(Debug)]
 pub struct Menu {
 	hmenu: HMENU
 }
 impl Menu {
-	pub fn new() -> core::result::Result<Self, String> {
+	pub fn new() -> Result<Self, String> {
 		Ok(Self {
 			hmenu: unsafe { CreateMenu() }.map_err(|err| format!("Error creating menu: {err}"))?
 		})
@@ -66,24 +74,81 @@ impl Menu {
 	pub fn item_count(&self) -> u32 {
 		unsafe { GetMenuItemCount(self.hmenu) as u32 }
 	}
-	pub fn add_item(&self, command_id: u16, text: &str) -> core::result::Result<(), String> {
-		match command_id.checked_add(0xF001) {
-			Some(id) => unsafe { AppendMenuW(self.hmenu, MF_STRING, id as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding menu item: {err}")),
-			None => Err(format!("Command ID {command_id} is not allowed, 4094 is the maximum value."))
+	pub fn add_item(&self, id: u16, text: &str) -> Result<(), String> {
+		match id.checked_add(0xF001) {
+			Some(id) => unsafe { AppendMenuW(self.hmenu, MF_STRING, internalize_id(id)? as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding menu item: {err}")),
+			None => Err(format!("ID {id} is not allowed, 4094 is the maximum value."))
 		}
 	}
-	pub fn add_submenu(&self, submenu: Menu, text: &str) -> core::result::Result<(), String> {
+	pub fn add_submenu(&self, submenu: Menu, text: &str) -> Result<(), String> {
 		unsafe { AppendMenuW(self.hmenu, MF_POPUP, submenu.hmenu.0 as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding submenu: {err}"))
 	}
-	pub fn replace_item(&self, index: u32, id: usize, text: &str) -> core::result::Result<(), String> {
-		unsafe { ModifyMenuW(self.hmenu, index, MF_STRING, id, &HSTRING::from(text)) }.map_err(|err| format!("Error editing menu item: {err}"))
+	pub fn add_separator(&self) -> Result<(), String> {
+		unsafe { AppendMenuW(self.hmenu, MF_SEPARATOR, 0, PCWSTR(std::ptr::null())) }.map_err(|err| format!("Error adding menu separator: {err}"))
+	}
+	pub fn replace_item(&self, id: u16, new_id: u16, text: &str) -> Result<(), String> {
+		unsafe { ModifyMenuW(self.hmenu, internalize_id(id)?, MF_STRING, internalize_id(new_id)? as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error editing menu item: {err}"))
+	}
+	pub fn remove_item(&self, id: u16) -> Result<(), String> {
+		unsafe { ModifyMenuW(self.hmenu, internalize_id(id)?, MF_REMOVE, 0, PCWSTR(std::ptr::null())) }.map_err(|err| format!("Error removing menu item: {err}"))
+	}
+	pub fn set_item_check(&self, id: u16, checked: bool) -> Result<(), String> {
+		match unsafe { CheckMenuItem(self.hmenu, internalize_id(id)?, match checked {
+			true => MF_CHECKED.0,
+			false => MF_UNCHECKED.0
+		}) } {
+			0 => Ok(()),
+			_ => Err(String::from("Error checking menu item."))
+		}
+	}
+	pub fn set_item_enable(&self, id: u16, enabled: bool) -> Result<(), String> {
+		match unsafe { EnableMenuItem(self.hmenu, internalize_id(id)?, match enabled {
+			true => MF_ENABLED,
+			false => MF_DISABLED
+		}) } {
+			BOOL(0) => Ok(()),
+			_ => Err(String::from("Error enabling menu item."))
+		}
+	}
+	pub fn set_item_highlight(&self, id: u16, window_handle: WindowHandle, highlighted: bool) -> Result<(), String> {
+		match unsafe { HiliteMenuItem(window_handle.hwnd, self.hmenu, internalize_id(id)?, match highlighted {
+			true => MF_HILITE.0,
+			false => MF_UNHILITE.0
+		}) } {
+			BOOL(0) => Ok(()),
+			_ => Err(String::from("Error highlighting menu item."))
+		}
+	}
+	pub fn set_item_menu_break(&self, id: u16, state: bool) -> Result<(), String> {
+		self.set_type_flag(internalize_id(id)?, MFT_MENUBREAK, state).map_err(|err| format!("Error setting menu break: {err}"))
+	}
+	pub fn set_item_menu_bar_break(&self, id: u16, state: bool) -> Result<(), String> {
+		self.set_type_flag(internalize_id(id)?, MFT_MENUBARBREAK, state).map_err(|err| format!("Error setting menu bar break: {err}"))
+	}
+	pub fn set_item_right_justify(&self, id: u16, state: bool) -> Result<(), String> {
+		self.set_type_flag(internalize_id(id)?, MFT_RIGHTJUSTIFY, state).map_err(|err| format!("Error setting menu item right justify: {err}"))
+	}
+	fn set_type_flag(&self, wid: u32, flag: MENU_ITEM_TYPE, state: bool) -> windows::core::Result<()> {
+		let mut mii = MENUITEMINFOW {
+			cbSize: std::mem::size_of::<MENUITEMINFOW>() as u32,
+			fMask: MIIM_TYPE,
+			..Default::default()
+		};
+		unsafe { GetMenuItemInfoW(self.hmenu, wid, FALSE, &mut mii as *mut MENUITEMINFOW) }?;
+		
+		match state {
+			true => mii.fType |= flag,
+			false => mii.fType &= !flag
+		}
+		unsafe { SetMenuItemInfoW(self.hmenu, wid, FALSE, &mii as *const MENUITEMINFOW) }
 	}
 }
 
+
+
 #[derive(Debug)]
-pub struct WindowHandle {
-	hwnd: HWND
-}
+pub struct WindowHandle { hwnd: HWND }
+
 impl WindowHandle {
 	pub fn set_timer(&self, timer_id: usize, milliseconds: u32) {
 		unsafe { SetTimer(self.hwnd, timer_id, milliseconds, None) };
@@ -99,13 +164,13 @@ impl WindowHandle {
 			Some(Menu { hmenu })
 		}
 	}
-	pub fn replace_menu(&self, menu: Menu) -> core::result::Result<(), String> {
+	pub fn replace_menu(&self, menu: Menu) -> Result<(), String> {
 		if let Some(menu) = self.get_menu() {
 			unsafe { DestroyMenu(menu.hmenu) }.unwrap_or(());
 		}
 		unsafe { SetMenu(self.hwnd, menu.hmenu) }.map_err(|err| format!("Error setting new menu: {err}"))
 	}
-	pub fn redraw_menu(&self) -> core::result::Result<(), String> {
+	pub fn redraw_menu(&self) -> Result<(), String> {
 		unsafe { DrawMenuBar(self.hwnd) }.map_err(|err| format!("Error drawing menu bar: {err}"))
 	}
 }
@@ -284,7 +349,7 @@ fn handle_message(app_ptr: *mut c_void, message: u32, wparam: WPARAM, lparam: LP
 
 
 
-pub fn run_window_process(window_id: &str, window_width: u32, window_height: u32, window_title: &str, always_on_top: bool, app_state: impl SimpleWindowApp + 'static) -> core::result::Result<i32, String> {
+pub fn run_window_process(window_id: &str, window_width: u32, window_height: u32, window_title: &str, always_on_top: bool, app_state: impl SimpleWindowApp + 'static) -> Result<i32, String> {
 	
 	unsafe { RoInitialize(RO_INIT_SINGLETHREADED) }.map_err(|e| format!("Error initializing window: {e}"))?;
 	let options = DispatcherQueueOptions {
@@ -371,7 +436,7 @@ pub fn run_window_process(window_id: &str, window_width: u32, window_height: u32
 	
 	let async_action = controller.ShutdownQueueAsync().map_err(|e| format!("Error sending shutdown signal: {e}"))?;
 	async_action.SetCompleted(&AsyncActionCompletedHandler::new(
-		move |_, _| -> Result<()> {
+		move |_, _| -> windows::core::Result<()> {
 			unsafe { PostQuitMessage(message.wParam.0 as i32) };
 			Ok(())
 		}
