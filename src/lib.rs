@@ -63,6 +63,7 @@ impl Menu {
 			hmenu: unsafe { CreateMenu() }.map_err(|err| format!("Error creating menu: {err}"))?
 		})
 	}
+	
 	pub fn get_submenu(&self, index: u32) -> Option<Menu> {
 		let hmenu = unsafe { GetSubMenu(self.hmenu, index as i32) };
 		if hmenu.is_invalid() {
@@ -71,24 +72,31 @@ impl Menu {
 			Some(Menu { hmenu })
 		}
 	}
+	
 	pub fn item_count(&self) -> u32 {
 		unsafe { GetMenuItemCount(self.hmenu) as u32 }
 	}
+	
 	pub fn add_item(&self, id: u16, text: &str) -> Result<(), String> {
 		unsafe { AppendMenuW(self.hmenu, MF_STRING, internalize_id(id)? as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding menu item: {err}"))
 	}
+	
 	pub fn add_submenu(&self, submenu: Menu, text: &str) -> Result<(), String> {
 		unsafe { AppendMenuW(self.hmenu, MF_POPUP, submenu.hmenu.0 as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error adding submenu: {err}"))
 	}
+	
 	pub fn add_separator(&self) -> Result<(), String> {
 		unsafe { AppendMenuW(self.hmenu, MF_SEPARATOR, 0, PCWSTR(std::ptr::null())) }.map_err(|err| format!("Error adding menu separator: {err}"))
 	}
+	
 	pub fn replace_item(&self, id: u16, new_id: u16, text: &str) -> Result<(), String> {
 		unsafe { ModifyMenuW(self.hmenu, internalize_id(id)?, MF_STRING, internalize_id(new_id)? as usize, &HSTRING::from(text)) }.map_err(|err| format!("Error editing menu item: {err}"))
 	}
+	
 	pub fn remove_item(&self, id: u16) -> Result<(), String> {
 		unsafe { ModifyMenuW(self.hmenu, internalize_id(id)?, MF_REMOVE, 0, PCWSTR(std::ptr::null())) }.map_err(|err| format!("Error removing menu item: {err}"))
 	}
+	
 	pub fn set_item_check(&self, id: u16, checked: bool) -> Result<(), String> {
 		match unsafe { CheckMenuItem(self.hmenu, internalize_id(id)?, match checked {
 			true => MF_CHECKED.0,
@@ -98,6 +106,7 @@ impl Menu {
 			_ => Err(String::from("Error checking menu item."))
 		}
 	}
+	
 	pub fn set_item_enable(&self, id: u16, enabled: bool) -> Result<(), String> {
 		match unsafe { EnableMenuItem(self.hmenu, internalize_id(id)?, match enabled {
 			true => MF_ENABLED,
@@ -107,6 +116,7 @@ impl Menu {
 			_ => Err(String::from("Error enabling menu item."))
 		}
 	}
+	
 	pub fn set_item_highlight(&self, id: u16, window_handle: WindowHandle, highlighted: bool) -> Result<(), String> {
 		match unsafe { HiliteMenuItem(window_handle.hwnd, self.hmenu, internalize_id(id)?, match highlighted {
 			true => MF_HILITE.0,
@@ -116,15 +126,19 @@ impl Menu {
 			_ => Err(String::from("Error highlighting menu item."))
 		}
 	}
+	
 	pub fn set_item_menu_break(&self, id: u16, state: bool) -> Result<(), String> {
 		self.set_type_flag(internalize_id(id)?, MFT_MENUBREAK, state).map_err(|err| format!("Error setting menu break: {err}"))
 	}
+	
 	pub fn set_item_menu_bar_break(&self, id: u16, state: bool) -> Result<(), String> {
 		self.set_type_flag(internalize_id(id)?, MFT_MENUBARBREAK, state).map_err(|err| format!("Error setting menu bar break: {err}"))
 	}
+	
 	pub fn set_item_right_justify(&self, id: u16, state: bool) -> Result<(), String> {
 		self.set_type_flag(internalize_id(id)?, MFT_RIGHTJUSTIFY, state).map_err(|err| format!("Error setting menu item right justify: {err}"))
 	}
+	
 	fn set_type_flag(&self, wid: u32, flag: MENU_ITEM_TYPE, state: bool) -> windows::core::Result<()> {
 		let mut mii = MENUITEMINFOW {
 			cbSize: std::mem::size_of::<MENUITEMINFOW>() as u32,
@@ -150,9 +164,11 @@ impl WindowHandle {
 	pub fn set_timer(&self, timer_id: usize, milliseconds: u32) {
 		unsafe { SetTimer(self.hwnd, timer_id, milliseconds, None) };
 	}
+	
 	pub fn request_redraw(&self) {
 		unsafe { InvalidateRect(self.hwnd, None, false) };
 	}
+	
 	pub fn get_menu(&self) -> Option<Menu> {
 		let hmenu = unsafe { GetMenu(self.hwnd) };
 		if hmenu.is_invalid() {
@@ -161,12 +177,20 @@ impl WindowHandle {
 			Some(Menu { hmenu })
 		}
 	}
-	pub fn replace_menu(&self, menu: Menu) -> Result<(), String> {
+	
+	pub fn set_menu(&self, menu: Menu) -> Result<(), String> {
 		if let Some(menu) = self.get_menu() {
 			unsafe { DestroyMenu(menu.hmenu) }.unwrap_or(());
 		}
 		unsafe { SetMenu(self.hwnd, menu.hmenu) }.map_err(|err| format!("Error setting new menu: {err}"))
 	}
+	
+	pub fn remove_menu(&self) {
+		if let Some(menu) = self.get_menu() {
+			unsafe { DestroyMenu(menu.hmenu) }.unwrap_or(());
+		}
+	}
+	
 	pub fn redraw_menu(&self) -> Result<(), String> {
 		unsafe { DrawMenuBar(self.hwnd) }.map_err(|err| format!("Error drawing menu bar: {err}"))
 	}

@@ -4,6 +4,7 @@ use super::*;
 use crate::{SimpleWindowApp, WindowHandle, Rect, Menu};
 
 
+#[allow(dead_code)]
 struct MyAppState {
 	previous_frame_time: std::time::Instant,
 	time: f64
@@ -50,7 +51,7 @@ impl SimpleWindowApp for MyAppState {
 		handle.get_menu().unwrap().add_item(7, &key_code.to_string()).unwrap();
 		let menu = Menu::new().unwrap();
 		menu.add_item(key_code as u16, &format!("hello {key_code}")).unwrap();
-		handle.replace_menu(menu).unwrap();
+		handle.set_menu(menu).unwrap();
 		handle.redraw_menu().unwrap();
 		
 	}
